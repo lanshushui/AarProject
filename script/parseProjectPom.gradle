@@ -1,0 +1,97 @@
+buildscript {
+    dependencies {
+        classpath files("${rootDir}/libs/snakeyaml-1.29.jar")
+    }
+}
+import org.yaml.snakeyaml.*
+import java.io.File
+apply from: file("/utils.gradle.kts")
+
+def pomFile = new File("${rootDir}/config/aarPomConfig.yml")
+if (!pomFile.exists()) {
+    System.out.println("aarPomConfig don't exist")
+    return
+}
+
+enum CompileMode {
+    SOURCE,
+    AAR
+}
+
+class AarConfig {
+    String groupId
+    String artifactId
+    String version
+    String projectPath
+    CompileMode compileMode = CompileMode.SOURCE
+}
+
+class AarConfigManager {
+
+    LinkedHashMap<String, AarConfig> aarConfigs
+
+    AarConfigManager(LinkedHashMap<String, AarConfig> aarConfigs, LinkedHashMap<String, String> compileConfigs) {
+        this.aarConfigs = aarConfigs
+        int aarNum = 0
+        compileConfigs.forEach { String key, String value ->
+            AarConfig aarConfig = aarConfigs.get(key)
+            if (aarConfig != null) {
+                if (value.equalsIgnoreCase("aar")) {
+                    aarConfig.compileMode = CompileMode.AAR
+                    aarNum++
+                } else {
+                    aarConfig.compileMode = CompileMode.SOURCE
+                }
+            }
+        }
+        println("配置了 ${aarConfigs.size()}个Pom数据,其中${aarNum}个aar化，${aarConfigs.size()-aarNum}个源码化")
+    }
+
+    AarConfig getAarConfig(String dependencyNotation) {
+        String notation = dependencyNotation.replaceAll(":", "/")
+        return aarConfigs.get(notation)
+    }
+}
+
+def dumperOptions = new DumperOptions()
+dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK)
+def yamlHecate = new Yaml(dumperOptions)
+//读取module配置信息
+def aarPomConfig = yamlHecate.load(pomFile.newInputStream())
+def groupId = aarPomConfig.common.groupId
+def aarConfigs = [:]
+(aarPomConfig.projects ?: []).each {
+    def aarConfig = new AarConfig()
+    aarConfig.groupId = groupId
+    aarConfig.artifactId = it.artifactId
+    aarConfig.version = it.version
+    aarConfig.projectPath = it.projectPath
+    aarConfigs.put(it.projectPath, aarConfig)
+}
+if (aarConfigs.size() == 0) {
+    println("没有配置的Aar数据")
+    return
+}
+//读取编译模式配置信息，默认 源码编译
+def compileModeFile = new File("${rootDir}/config/compileModeConfig.yml")
+def compileConfigs = [:]
+if (compileModeFile.exists()) {
+    compileConfigs = yamlHecate.load(compileModeFile.newInputStream())
+}
+
+ext.aarConfigManager = new AarConfigManager(aarConfigs, compileConfigs)
+
+gradle.beforeProject {
+//    it.afterEvaluate{
+//        it.apply from: file("${rootDir}/script/maven_publish.gradle")
+//    }
+    it.ext.projectOrAAr = { String dependencyNotation ->
+        AarConfigManager AarConfigManager = ext.aarConfigManager
+        def aarConfig = AarConfigManager.getAarConfig(dependencyNotation)
+        if (aarConfig == null || aarConfig.compileMode == CompileMode.SOURCE) {
+            return gradle.rootProject.project(dependencyNotation)
+        } else {
+            return "${aarConfig.groupId}:${aarConfig.artifactId}:${aarConfig.version}"
+        }
+    }
+}

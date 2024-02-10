@@ -1,0 +1,3 @@
+# 选择 aar source 两个模式
+/library1: source
+/library2: aar

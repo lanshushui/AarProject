@@ -1,0 +1,4 @@
+def projectOrAAr = ext.get("projectOrAAr") as groovy.lang.Closure<Object>
+def a=projectOrAAr(":library1")
+def mProject = project
+println("mProject  ${mProject}")

@@ -1,0 +1,6 @@
+common:
+  groupId: com.ct.ct
+projects:
+  - projectPath: /library1
+    artifactId: library1
+    version: 1.0.0_DEBUG
