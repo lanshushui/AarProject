@@ -5,6 +5,7 @@ buildscript {
 }
 import org.yaml.snakeyaml.*
 import java.io.File
+
 apply from: file("/utils.gradle")
 
 def pomFile = new File("${rootDir}/config/aarPomConfig.yml")
@@ -44,12 +45,30 @@ class AarConfigManager {
                 }
             }
         }
-        println("配置了 ${aarConfigs.size()}个Pom数据,其中${aarNum}个aar化，${aarConfigs.size()-aarNum}个源码化")
+        println("配置了 ${aarConfigs.size()}个Pom数据,其中${aarNum}个aar化，${aarConfigs.size() - aarNum}个源码化")
     }
 
     AarConfig getAarConfig(String dependencyNotation) {
         String notation = dependencyNotation.replaceAll(":", "/")
         return aarConfigs.get(notation)
+    }
+
+    String getGroupId(Project project) {
+        String path = project.path
+        AarConfig config = getAarConfig(path)
+        return config.groupId
+    }
+
+    String getArtifactId(Project project) {
+        String path = project.path
+        AarConfig config = getAarConfig(path)
+        return config.artifactId
+    }
+
+    String getVersion(Project project) {
+        String path = project.path
+        AarConfig config = getAarConfig(path)
+        return config.version
     }
 }
 
@@ -79,7 +98,7 @@ if (compileModeFile.exists()) {
     compileConfigs = yamlHecate.load(compileModeFile.newInputStream())
 }
 
-ext.aarConfigManager = new AarConfigManager(aarConfigs, compileConfigs)
+gradle.ext.aarConfigManager = new AarConfigManager(aarConfigs, compileConfigs)
 
 gradle.beforeProject {
     it.afterEvaluate {
@@ -88,7 +107,7 @@ gradle.beforeProject {
         }
     }
     it.ext.projectOrAAr = { String dependencyNotation ->
-        AarConfigManager AarConfigManager = ext.aarConfigManager
+        AarConfigManager AarConfigManager = gradle.ext.aarConfigManager
         def aarConfig = AarConfigManager.getAarConfig(dependencyNotation)
         if (aarConfig == null || aarConfig.compileMode == CompileMode.SOURCE) {
             //刚开始时，代码是 return project(dependencyNotation),结果不能运行
