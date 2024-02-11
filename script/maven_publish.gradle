@@ -21,6 +21,7 @@ afterEvaluate {
         }
         publications { PublicationContainer publicationContainer ->
             debug(MavenPublication) {
+                //可以通过 println("Components: " + components*.name) 看有哪些组件
                 from components.debug
 //                artifact sourceJar // 上传源码
                 groupId = GROUP_ID

@@ -24,7 +24,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-
 rootProject.name = "AarProject"
 include(":app")
 include(":library1")

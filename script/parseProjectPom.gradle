@@ -5,7 +5,7 @@ buildscript {
 }
 import org.yaml.snakeyaml.*
 import java.io.File
-apply from: file("/utils.gradle.kts")
+apply from: file("/utils.gradle")
 
 def pomFile = new File("${rootDir}/config/aarPomConfig.yml")
 if (!pomFile.exists()) {
@@ -82,13 +82,17 @@ if (compileModeFile.exists()) {
 ext.aarConfigManager = new AarConfigManager(aarConfigs, compileConfigs)
 
 gradle.beforeProject {
-//    it.afterEvaluate{
-//        it.apply from: file("${rootDir}/script/maven_publish.gradle")
-//    }
+    it.afterEvaluate {
+        if (isAndroidPlugin(it)) {
+            it.apply from: file("${rootDir}/script/maven_publish.gradle")
+        }
+    }
     it.ext.projectOrAAr = { String dependencyNotation ->
         AarConfigManager AarConfigManager = ext.aarConfigManager
         def aarConfig = AarConfigManager.getAarConfig(dependencyNotation)
         if (aarConfig == null || aarConfig.compileMode == CompileMode.SOURCE) {
+            //刚开始时，代码是 return project(dependencyNotation),结果不能运行
+            //因为这个脚本跑在setting.gradle脚本，方法定义时只能访问到gradle,没有project属性,访问不到project对象的project方法
             return gradle.rootProject.project(dependencyNotation)
         } else {
             return "${aarConfig.groupId}:${aarConfig.artifactId}:${aarConfig.version}"

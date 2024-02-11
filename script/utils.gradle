@@ -1,0 +1,13 @@
+//判断是否设置了某个插件
+static boolean isAndroidPlugin(Project curProject) {
+    return curProject.plugins.hasPlugin("com.android.library")
+}
+
+static boolean isAppPlugin(Project curProject) {
+    return curProject.plugins.hasPlugin("com.android.application")
+}
+//进行函数的导出
+ext{
+    isAndroidPlugin=this.&isAndroidPlugin
+    isAppPlugin=this.&isAppPlugin
+}
