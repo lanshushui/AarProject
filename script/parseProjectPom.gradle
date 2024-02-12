@@ -70,6 +70,12 @@ class AarConfigManager {
         AarConfig config = getAarConfig(path)
         return config.version
     }
+    /**
+     * 该工程是否支持AAr,源码切换功能
+     */
+    boolean isAarEnableProject(Project project) {
+        return getAarConfig(project.path) != null
+    }
 }
 
 def dumperOptions = new DumperOptions()
@@ -102,7 +108,8 @@ gradle.ext.aarConfigManager = new AarConfigManager(aarConfigs, compileConfigs)
 
 gradle.beforeProject {
     it.afterEvaluate {
-        if (isAndroidPlugin(it)) {
+        AarConfigManager aarConfigManager = gradle.ext.aarConfigManager
+        if (isAndroidPlugin(it) && aarConfigManager.isAarEnableProject(it)) {
             it.apply from: file("${rootDir}/script/maven_publish.gradle")
         }
     }
