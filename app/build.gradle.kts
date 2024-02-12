@@ -45,5 +45,4 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     implementation(projectOrAAr(":library1"))
-    //api("com.ct.ct:library1:1.0.0_DEBUG")
 }

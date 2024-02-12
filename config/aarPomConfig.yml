@@ -7,3 +7,6 @@ projects:
   - projectPath: /library2
     artifactId: library2
     version: 1.0.0_DEBUG
+  - projectPath: /library3
+    artifactId: library3
+    version: 1.0.0_DEBUG
