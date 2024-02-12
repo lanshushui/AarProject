@@ -29,14 +29,14 @@ afterEvaluate {
             }
         }
         publications { PublicationContainer publicationContainer ->
-            debug(MavenPublication) {
-                //可以通过 println("Components: " + components*.name) 看有哪些组件
-                from components.debug
-//                artifact androidSourcesJar // 上传源码
-                groupId = GROUP_ID
-                artifactId = ARTIFACT_ID
-                version = VERSION
-            }
+//            debug(MavenPublication) {
+//                //可以通过 println("Components: " + components*.name) 看有哪些组件
+//                from components.debug
+////                artifact androidSourcesJar // 上传源码
+//                groupId = GROUP_ID
+//                artifactId = ARTIFACT_ID
+//                version = VERSION
+//            }
             release(MavenPublication) {
                 from components.release
 //                artifact androidSourcesJar // 上传源码
