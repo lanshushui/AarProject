@@ -1,9 +1,19 @@
 apply plugin: 'maven-publish'
 
 // 上传源码的 task
-task sourceJar(type: Jar) {
-    from android.sourceSets.main.java.srcDirs
-    archiveClassifier = "sources"
+task androidSourcesJar(type: Jar) {
+    // 如果有Kotlin那么就需要打入dir : getSrcDirs
+    if (project.hasProperty("kotlin")) {
+        println '====> project kotlin'
+        from android.sourceSets.main.java.getSrcDirs()
+    } else if (project.hasProperty("android")) {
+        println '====> project java'
+        from android.sourceSets.main.java.sourceFiles
+    } else {
+        println '====> project java & kotlin'
+        from sourceSets.main.allSource
+    }
+    archiveClassifier = "code-sources"
 }
 def aarConfigManager = gradle.ext.aarConfigManager
 
@@ -14,7 +24,6 @@ afterEvaluate {
     publishing {
         // 配置maven 仓库
         repositories { RepositoryHandler handler ->
-            handler.mavenLocal()
             handler.maven {
                 url "${rootDir}/local_repo/"
             }
@@ -23,18 +32,36 @@ afterEvaluate {
             debug(MavenPublication) {
                 //可以通过 println("Components: " + components*.name) 看有哪些组件
                 from components.debug
-//                artifact sourceJar // 上传源码
+//                artifact androidSourcesJar // 上传源码
                 groupId = GROUP_ID
                 artifactId = ARTIFACT_ID
                 version = VERSION
             }
             release(MavenPublication) {
                 from components.release
-                //               artifact sourceJar // 上传源码
+//                artifact androidSourcesJar // 上传源码
                 groupId = GROUP_ID
                 artifactId = ARTIFACT_ID
                 version = VERSION
             }
+            /**
+             * * What went wrong:
+             A problem was found with the configuration of task ':library1:sourceJar' (type 'Jar').
+             - Gradle detected a problem with the following location:
+             'C:\AarProject\library1\build\libs\library1-sources.jar'.
+
+             Reason: Task ':library1:generateMetadataFileForReleasePublication'
+             uses this output of task ':library1:sourceJar'
+             without declaring an explicit or implicit dependency. This can lead to incorrect results being
+             produced, depending on what order the tasks are executed.
+             */
+            //在这里之后才能找到generateMetadataFileForReleasePublication任务
+//            tasks.named("generateMetadataFileForDebugPublication"){
+//                dependsOn "androidSourcesJar"
+//            }
+//            tasks.named("generateMetadataFileForReleasePublication"){
+//                dependsOn "androidSourcesJar"
+//            }
         }
     }
 }
