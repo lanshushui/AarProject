@@ -29,7 +29,7 @@ class AarConfig {
 
 class AarConfigManager {
 
-    LinkedHashMap<String, AarConfig> aarConfigs
+    private LinkedHashMap<String, AarConfig> aarConfigs
 
     AarConfigManager(LinkedHashMap<String, AarConfig> aarConfigs, LinkedHashMap<String, String> compileConfigs) {
         this.aarConfigs = aarConfigs
@@ -76,6 +76,16 @@ class AarConfigManager {
     boolean isAarEnableProject(Project project) {
         return getAarConfig(project.path) != null
     }
+
+    /**
+     * 获得所有source编译类型的module
+     * @return
+     */
+    Collection<AarConfig> getSourceTypeProjectConfig() {
+        return aarConfigs.values().findAll {
+            it.compileMode == CompileMode.SOURCE
+        }
+    }
 }
 
 def dumperOptions = new DumperOptions()
@@ -113,15 +123,23 @@ gradle.beforeProject {
             it.apply from: file("${rootDir}/script/maven_publish.gradle")
         }
     }
+    //基于gradle的动态特性设计，如果是build.gradle文件 则implementation projectOrAAr(":xxx") 直接接入
     it.ext.projectOrAAr = { String dependencyNotation ->
-        AarConfigManager AarConfigManager = gradle.ext.aarConfigManager
-        def aarConfig = AarConfigManager.getAarConfig(dependencyNotation)
+        AarConfigManager aarConfigManager = gradle.ext.aarConfigManager
+        def aarConfig = aarConfigManager.getAarConfig(dependencyNotation)
         if (aarConfig == null || aarConfig.compileMode == CompileMode.SOURCE) {
             //刚开始时，代码是 return project(dependencyNotation),结果不能运行
             //因为这个脚本跑在setting.gradle脚本，方法定义时只能访问到gradle,没有project属性,访问不到project对象的project方法
             return gradle.rootProject.project(dependencyNotation)
         } else {
-            return "${aarConfig.groupId}:${aarConfig.artifactId}:${aarConfig.version}"
+            def exclude = { module ->
+                def sourceProjects = aarConfigManager.getSourceTypeProjectConfig()
+                sourceProjects.forEach {
+                    module.exclude group: "${it.groupId}", module: "${it.artifactId}"
+                }
+            }
+            return ["${aarConfig.groupId}:${aarConfig.artifactId}:${aarConfig.version}",exclude]
         }
     }
+    //基于kotlin静态语言设置，为了兼容projectOrAAr方法新增的方法
 }
