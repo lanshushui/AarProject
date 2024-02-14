@@ -4,13 +4,13 @@ apply plugin: 'maven-publish'
 task androidSourcesJar(type: Jar) {
     // 如果有Kotlin那么就需要打入dir : getSrcDirs
     if (project.hasProperty("kotlin")) {
-        println '====> project kotlin'
+        //println '====> project kotlin'
         from android.sourceSets.main.java.getSrcDirs()
     } else if (project.hasProperty("android")) {
-        println '====> project java'
+        //println '====> project java'
         from android.sourceSets.main.java.sourceFiles
     } else {
-        println '====> project java & kotlin'
+        //println '====> project java & kotlin'
         from sourceSets.main.allSource
     }
     archiveClassifier = "code-sources"
@@ -18,9 +18,19 @@ task androidSourcesJar(type: Jar) {
 def aarConfigManager = gradle.ext.aarConfigManager
 
 afterEvaluate {
-    def GROUP_ID = aarConfigManager.getGroupId(it)
-    def ARTIFACT_ID = aarConfigManager.getArtifactId(it)
-    def VERSION = aarConfigManager.getVersion(it)
+    String GROUP_ID = aarConfigManager.getGroupId(it)
+    String ARTIFACT_ID = aarConfigManager.getArtifactId(it)
+    String VERSION = aarConfigManager.getVersion(it)
+    //默认值
+    def nextVersion = "1.${System.currentTimeMillis()}"
+    //若存在已经发布的版本
+    if (VERSION != "0") {
+        String[] datas = VERSION.split("\\.")
+        if (datas.length == 2) {
+            int v = Integer.parseInt(datas[0])
+            nextVersion = "${v + 1}.${System.currentTimeMillis()}"
+        }
+    }
     publishing {
         // 配置maven 仓库
         repositories { RepositoryHandler handler ->
@@ -29,39 +39,13 @@ afterEvaluate {
             }
         }
         publications { PublicationContainer publicationContainer ->
-//            debug(MavenPublication) {
-//                //可以通过 println("Components: " + components*.name) 看有哪些组件
-//                from components.debug
-////                artifact androidSourcesJar // 上传源码
-//                groupId = GROUP_ID
-//                artifactId = ARTIFACT_ID
-//                version = VERSION
-//            }
             release(MavenPublication) {
                 from components.release
 //                artifact androidSourcesJar // 上传源码
                 groupId = GROUP_ID
                 artifactId = ARTIFACT_ID
-                version = VERSION
+                version = nextVersion
             }
-            /**
-             * * What went wrong:
-             A problem was found with the configuration of task ':library1:sourceJar' (type 'Jar').
-             - Gradle detected a problem with the following location:
-             'C:\AarProject\library1\build\libs\library1-sources.jar'.
-
-             Reason: Task ':library1:generateMetadataFileForReleasePublication'
-             uses this output of task ':library1:sourceJar'
-             without declaring an explicit or implicit dependency. This can lead to incorrect results being
-             produced, depending on what order the tasks are executed.
-             */
-            //在这里之后才能找到generateMetadataFileForReleasePublication任务
-//            tasks.named("generateMetadataFileForDebugPublication"){
-//                dependsOn "androidSourcesJar"
-//            }
-//            tasks.named("generateMetadataFileForReleasePublication"){
-//                dependsOn "androidSourcesJar"
-//            }
         }
     }
 }

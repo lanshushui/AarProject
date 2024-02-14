@@ -37,7 +37,7 @@ class AarConfigManager {
         compileConfigs.forEach { String key, String value ->
             AarConfig aarConfig = aarConfigs.get(key)
             if (aarConfig != null) {
-                if (value.equalsIgnoreCase("aar")) {
+                if (value.equalsIgnoreCase("aar") && aarConfig.version != "0") {
                     aarConfig.compileMode = CompileMode.AAR
                     aarNum++
                 } else {
@@ -138,7 +138,7 @@ gradle.beforeProject {
                     module.exclude group: "${it.groupId}", module: "${it.artifactId}"
                 }
             }
-            return ["${aarConfig.groupId}:${aarConfig.artifactId}:${aarConfig.version}",exclude]
+            return ["${aarConfig.groupId}:${aarConfig.artifactId}:${aarConfig.version}", exclude]
         }
     }
     //基于kotlin静态语言设置，为了兼容projectOrAAr方法新增的方法

@@ -3,10 +3,10 @@ common:
 projects:
   - projectPath: /library1
     artifactId: library1
-    version: 1.0.0_DEBUG
+    version: 0
   - projectPath: /library2
     artifactId: library2
-    version: 1.0.0_DEBUG
+    version: 0
   - projectPath: /library3
     artifactId: library3
-    version: 1.0.0_DEBUG
+    version: 0
