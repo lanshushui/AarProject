@@ -1,5 +1,5 @@
 apply plugin: 'maven-publish'
-
+apply from: file("${rootDir}/script/utils.gradle")
 // 上传源码的 task
 task androidSourcesJar(type: Jar) {
     // 如果有Kotlin那么就需要打入dir : getSrcDirs
@@ -46,6 +46,19 @@ afterEvaluate {
                 artifactId = ARTIFACT_ID
                 version = nextVersion
             }
+        }
+    }
+    ////////////为AAr专门配置的方法   ////////////////
+    task("publishAAr", group: "publishing") {
+        doLast {
+            String path = project.path
+            String cmd = "gradlew ${path}:publishReleasePublicationToMavenRepository"
+            rootProject.exec {
+                commandLine 'cmd','/c',cmd
+            }
+            String curVersion = project.publishing.publications.release.version
+            println("${path} 发布了AAr,版本为 ${curVersion}")
+            aarConfigManager.updateAarVersion(path, curVersion)
         }
     }
 }

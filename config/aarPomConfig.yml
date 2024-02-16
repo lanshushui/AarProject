@@ -1,12 +1,10 @@
-common:
-  groupId: com.ct.ct
 projects:
   - projectPath: /library1
     artifactId: library1
-    version: 0
+    version: '0'
   - projectPath: /library2
     artifactId: library2
-    version: 0
+    version: '4.1708053763952'
   - projectPath: /library3
     artifactId: library3
-    version: 0
+    version: '0'

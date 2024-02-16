@@ -30,8 +30,10 @@ class AarConfig {
 class AarConfigManager {
 
     private LinkedHashMap<String, AarConfig> aarConfigs
+    private Gradle gradle
 
-    AarConfigManager(LinkedHashMap<String, AarConfig> aarConfigs, LinkedHashMap<String, String> compileConfigs) {
+    AarConfigManager(Gradle gradle, LinkedHashMap<String, AarConfig> aarConfigs, LinkedHashMap<String, String> compileConfigs) {
+        this.gradle = gradle
         this.aarConfigs = aarConfigs
         int aarNum = 0
         compileConfigs.forEach { String key, String value ->
@@ -86,14 +88,41 @@ class AarConfigManager {
             it.compileMode == CompileMode.SOURCE
         }
     }
+
+    /**
+     * 发布AAr后，更新内存和文件的version版本
+     */
+    void updateAarVersion(String path, String version) {
+        AarConfig aarConfig = getAarConfig(path)
+        aarConfig.version = version
+        def dumperOptions = new DumperOptions()
+        dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK)
+        dumperOptions.setIndent(2)
+        dumperOptions.setIndicatorIndent(2)
+        dumperOptions.setIndentWithIndicator(true);
+        def yaml = new Yaml(dumperOptions)
+        Map<String, Object> data = new LinkedHashMap<String, Object>()
+        ArrayList<LinkedHashMap<String, String>> list = new ArrayList<>()
+        aarConfigs.values().forEach {
+            LinkedHashMap<String, String> map = new LinkedHashMap<>()
+            map.put("projectPath",it.projectPath)
+            map.put("artifactId",it.artifactId)
+            map.put("version",it.version)
+            list.add(map)
+        }
+        data.put("projects", list)
+        def pomFile = new File("${this.gradle.rootProject.rootDir}/config/aarPomConfig.yml")
+        FileWriter fw = new FileWriter(pomFile)
+        yaml.dump(data, fw)
+    }
 }
 
 def dumperOptions = new DumperOptions()
 dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK)
-def yamlHecate = new Yaml(dumperOptions)
+def yaml = new Yaml(dumperOptions)
 //读取module配置信息
-def aarPomConfig = yamlHecate.load(pomFile.newInputStream())
-def groupId = aarPomConfig.common.groupId
+def aarPomConfig = yaml.load(pomFile.newInputStream())
+def groupId = "com.ct.ct"
 def aarConfigs = [:]
 (aarPomConfig.projects ?: []).each {
     def aarConfig = new AarConfig()
@@ -111,10 +140,10 @@ if (aarConfigs.size() == 0) {
 def compileModeFile = new File("${rootDir}/config/compileModeConfig.yml")
 def compileConfigs = [:]
 if (compileModeFile.exists()) {
-    compileConfigs = yamlHecate.load(compileModeFile.newInputStream())
+    compileConfigs = yaml.load(compileModeFile.newInputStream())
 }
 
-gradle.ext.aarConfigManager = new AarConfigManager(aarConfigs, compileConfigs)
+gradle.ext.aarConfigManager = new AarConfigManager(gradle, aarConfigs, compileConfigs)
 
 gradle.beforeProject {
     it.afterEvaluate {
@@ -141,5 +170,4 @@ gradle.beforeProject {
             return ["${aarConfig.groupId}:${aarConfig.artifactId}:${aarConfig.version}", exclude]
         }
     }
-    //基于kotlin静态语言设置，为了兼容projectOrAAr方法新增的方法
 }
