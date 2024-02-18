@@ -105,9 +105,9 @@ class AarConfigManager {
         ArrayList<LinkedHashMap<String, String>> list = new ArrayList<>()
         aarConfigs.values().forEach {
             LinkedHashMap<String, String> map = new LinkedHashMap<>()
-            map.put("projectPath",it.projectPath)
-            map.put("artifactId",it.artifactId)
-            map.put("version",it.version)
+            map.put("projectPath", it.projectPath)
+            map.put("artifactId", it.artifactId)
+            map.put("version", it.version)
             list.add(map)
         }
         data.put("projects", list)
@@ -145,6 +145,13 @@ if (compileModeFile.exists()) {
 
 gradle.ext.aarConfigManager = new AarConfigManager(gradle, aarConfigs, compileConfigs)
 
+//引入所有源码依赖的project
+gradle.settingsEvaluated { setting ->
+    Collection<AarConfig> allSourceP = gradle.ext.aarConfigManager.getSourceTypeProjectConfig()
+    allSourceP.forEach {
+        setting.include it.projectPath.replaceAll("/", ":")
+    }
+}
 gradle.beforeProject {
     it.afterEvaluate {
         AarConfigManager aarConfigManager = gradle.ext.aarConfigManager

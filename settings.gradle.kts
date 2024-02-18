@@ -26,6 +26,3 @@ dependencyResolutionManagement {
 }
 rootProject.name = "AarProject"
 include(":app")
-include(":library1")
-include(":library2")
-include(":library3")

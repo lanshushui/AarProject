@@ -1,7 +1,7 @@
 projects:
   - projectPath: /library1
     artifactId: library1
-    version: '0'
+    version: '1.1708244799606'
   - projectPath: /library2
     artifactId: library2
     version: '2.1708243855655'
