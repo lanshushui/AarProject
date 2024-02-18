@@ -90,6 +90,16 @@ class AarConfigManager {
     }
 
     /**
+     * 获得所有aar编译类型的module
+     * @return
+     */
+    Collection<AarConfig> getAARTypeProjectConfig() {
+        return aarConfigs.values().findAll {
+            it.compileMode == CompileMode.AAR
+        }
+    }
+
+    /**
      * 发布AAr后，更新内存和文件的version版本
      */
     void updateAarVersion(String path, String version) {
@@ -154,10 +164,19 @@ gradle.settingsEvaluated { setting ->
 }
 gradle.beforeProject {
     it.afterEvaluate {
+        AarConfigManager aarConfigManager = gradle.ext.aarConfigManager
         if (it == gradle.rootProject) {
             it.apply from: file("${rootDir}/script/publishAAr_RP.gradle")
         } else {
-            AarConfigManager aarConfigManager = gradle.ext.aarConfigManager
+            //设置依赖的aar强制版本
+            it.configurations.all {
+                Collection<AarConfig> list = aarConfigManager.getAARTypeProjectConfig()
+                list.forEach {
+                    String url = "${it.groupId}:${it.artifactId}:${it.version}"
+                    resolutionStrategy.force url
+                }
+            }
+            //设置maven_publish插件
             if (isAndroidPlugin(it) && aarConfigManager.isAarEnableProject(it)) {
                 it.apply from: file("${rootDir}/script/maven_publish.gradle")
             }
