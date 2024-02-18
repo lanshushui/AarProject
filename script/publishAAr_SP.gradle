@@ -1,0 +1,28 @@
+//针对子项目 的aar任务
+def getNextVersion = { VERSION ->
+    //默认值
+    def nextVersion = "1.${System.currentTimeMillis()}"
+    //若存在已经发布的版本
+    if (VERSION != "0") {
+        String[] datas = VERSION.split("\\.")
+        if (datas.length == 2) {
+            int v = Integer.parseInt(datas[0])
+            nextVersion = "${v + 1}.${System.currentTimeMillis()}"
+        }
+    }
+    return nextVersion
+}
+task("publishAAr", group: "publishing") {
+    doLast {
+        String path = project.path
+        def aarConfigManager = gradle.ext.aarConfigManager
+        def version = aarConfigManager.getVersion(project)
+        String nextVersion = getNextVersion(version)
+        String cmd = "gradlew ${path}:publishReleasePublicationToMavenRepository -Pversion=${nextVersion}"
+        rootProject.exec {
+            commandLine 'cmd', '/c', cmd
+        }
+        println("${path} 发布了AAr,版本为 ${nextVersion}")
+        aarConfigManager.updateAarVersion(path, nextVersion)
+    }
+}

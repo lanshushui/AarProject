@@ -154,9 +154,13 @@ gradle.settingsEvaluated { setting ->
 }
 gradle.beforeProject {
     it.afterEvaluate {
-        AarConfigManager aarConfigManager = gradle.ext.aarConfigManager
-        if (isAndroidPlugin(it) && aarConfigManager.isAarEnableProject(it)) {
-            it.apply from: file("${rootDir}/script/maven_publish.gradle")
+        if (it == gradle.rootProject) {
+            it.apply from: file("${rootDir}/script/publishAAr_RP.gradle")
+        } else {
+            AarConfigManager aarConfigManager = gradle.ext.aarConfigManager
+            if (isAndroidPlugin(it) && aarConfigManager.isAarEnableProject(it)) {
+                it.apply from: file("${rootDir}/script/maven_publish.gradle")
+            }
         }
     }
     //基于gradle的动态特性设计，如果是build.gradle文件 则implementation projectOrAAr(":xxx") 直接接入

@@ -1,0 +1,7 @@
+//针对rootProject 的aar任务
+gradle.rootProject.task("publishAAr").enabled = false
+gradle.rootProject.task("publishAllAAr", group: "publishing") {
+    doLast {
+        println("publishing")
+    }
+}
