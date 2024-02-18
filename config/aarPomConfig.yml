@@ -4,7 +4,7 @@ projects:
     version: '0'
   - projectPath: /library2
     artifactId: library2
-    version: '4.1708053763952'
+    version: '2.1708243855655'
   - projectPath: /library3
     artifactId: library3
-    version: '0'
+    version: '2.1708243938931'

@@ -21,16 +21,6 @@ afterEvaluate {
     String GROUP_ID = aarConfigManager.getGroupId(it)
     String ARTIFACT_ID = aarConfigManager.getArtifactId(it)
     String VERSION = aarConfigManager.getVersion(it)
-    //默认值
-    def nextVersion = "1.${System.currentTimeMillis()}"
-    //若存在已经发布的版本
-    if (VERSION != "0") {
-        String[] datas = VERSION.split("\\.")
-        if (datas.length == 2) {
-            int v = Integer.parseInt(datas[0])
-            nextVersion = "${v + 1}.${System.currentTimeMillis()}"
-        }
-    }
     publishing {
         // 配置maven 仓库
         repositories { RepositoryHandler handler ->
@@ -44,21 +34,35 @@ afterEvaluate {
 //                artifact androidSourcesJar // 上传源码
                 groupId = GROUP_ID
                 artifactId = ARTIFACT_ID
-                version = nextVersion
+                def mVersion = project.hasProperty('version') ? project.version : '1.0.0'
+                version = mVersion
             }
         }
     }
-    ////////////为AAr专门配置的方法   ////////////////
+    ////////////  为AAr专门配置的方法   ////////////////
+    def getNextVersion = {
+        //默认值
+        def nextVersion = "1.${System.currentTimeMillis()}"
+        //若存在已经发布的版本
+        if (VERSION != "0") {
+            String[] datas = VERSION.split("\\.")
+            if (datas.length == 2) {
+                int v = Integer.parseInt(datas[0])
+                nextVersion = "${v + 1}.${System.currentTimeMillis()}"
+            }
+        }
+        return nextVersion
+    }
     task("publishAAr", group: "publishing") {
         doLast {
             String path = project.path
-            String cmd = "gradlew ${path}:publishReleasePublicationToMavenRepository"
+            String nextVersion = getNextVersion()
+            String cmd = "gradlew ${path}:publishReleasePublicationToMavenRepository -Pversion=${nextVersion}"
             rootProject.exec {
-                commandLine 'cmd','/c',cmd
+                commandLine 'cmd', '/c', cmd
             }
-            String curVersion = project.publishing.publications.release.version
-            println("${path} 发布了AAr,版本为 ${curVersion}")
-            aarConfigManager.updateAarVersion(path, curVersion)
+            println("${path} 发布了AAr,版本为 ${nextVersion}")
+            aarConfigManager.updateAarVersion(path, nextVersion)
         }
     }
 }
