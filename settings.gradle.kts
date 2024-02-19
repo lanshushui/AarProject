@@ -26,3 +26,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "AarProject"
 include(":app")
+include(":framework")
