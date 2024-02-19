@@ -100,6 +100,13 @@ class AarConfigManager {
     }
 
     /**
+     * 获得所有aar编译类型的module
+     * @return
+     */
+    Collection<AarConfig> getAllAArConfigs() {
+        return aarConfigs.values()
+    }
+    /**
      * 发布AAr后，更新内存和文件的version版本
      */
     void updateAarVersion(String path, String version) {
@@ -167,6 +174,7 @@ gradle.beforeProject {
         AarConfigManager aarConfigManager = gradle.ext.aarConfigManager
         if (it == gradle.rootProject) {
             it.apply from: file("${rootDir}/script/publishAAr_RP.gradle")
+            it.apply from: file("${rootDir}/script/fixDependence.gradle")
         } else {
             //设置依赖的aar强制版本
             it.configurations.all {

@@ -1,4 +1,4 @@
 # 选择 aar source 两个模式
-/library1: aar
+/library1: source
 /library2: aar
-/library3: aar
+/library3: source
