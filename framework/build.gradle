@@ -30,7 +30,7 @@ android {
 }
 
 dependencies {
-    api(projectOrAAr(":library1"))
-    api(projectOrAAr(":library2"))
-    api(projectOrAAr(":library3"))
+    implementation(projectOrAAr(":library1"))
+    implementation(projectOrAAr(":library2"))
+    implementation(projectOrAAr(":library3"))
 }
