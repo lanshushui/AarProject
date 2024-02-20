@@ -2,7 +2,9 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 //修复剔除aar后导致的依赖中断问题
-//////////////////获得所有源码依赖的模块 的 间接依赖
+//因为是静态分析build.gradle文件，所以只能找到build.gradle文件导入的依赖关系
+
+//目标： 获得源码依赖的模块 的 所有间接依赖
 
 def aarConfigManager = gradle.ext.aarConfigManager
 def allAArConfigsSize = aarConfigManager.getAllAArConfigs().size()
@@ -23,84 +25,145 @@ compileProject.add("/app")
 //收集所需module的直接依赖
 LinkedHashMap<String, HashSet<String>> allDirectDepends = new LinkedHashMap<>()
 def collectDepends
-collectDepends = { String projectPath ->
+collectDepends = { String p ->
+    String projectPath = p.replaceAll(":", "/")
     if (allDirectDepends.containsKey(projectPath)) return
+
 
     File buildFile = new File("${rootDir}/${projectPath}/build.gradle")
     if (!buildFile.exists()) throw Exception("无法找到 ${projectPath}项目的 build.gradle文件")
-    BufferedReader br = new BufferedReader(new FileReader(buildFile))
-    HashSet<String> directDepend = new HashSet()
-    while (true) {
-        String line = br.readLine()
-        if (line == null) {
-            break
-        } else {
-            String regex = "projectOrAAr\\(['\"](.*?)['\"]\\)"
-            Pattern pattern = Pattern.compile(regex)
-            Matcher matcher = pattern.matcher(line)
-            if (matcher.find()) {
-                String extractedString = matcher.group(1).replaceAll(":", "/")
-                // 提取匹配到的第一个括号内的内容
-                directDepend.add(extractedString)
+    def dfsFile
+    dfsFile = { File f ->
+        BufferedReader br = new BufferedReader(new FileReader(f))
+        HashSet<String> directDepend = new HashSet()
+        while (true) {
+            String line = br.readLine()
+            if (line != null) line.trim()
+            if (line == null) {
+                break
+            } else if (line.startsWith("//") || line.startsWith("*")) {
+                //备注不用管
+            } else if (line.contains("apply from:")) { //又apply 了其他gradle文件，需要递归进行分析
+                String regex = "['\"](.*?)['\"]"
+                Pattern pattern = Pattern.compile(regex)
+                Matcher matcher = pattern.matcher(line)
+                if (matcher.find()) {
+                    String extractedString = matcher.group(1)
+                    java.nio.file.Path paths = Paths.get(extractedString)
+                    File sf = null
+                    if (paths.isAbsolute()) {
+                        sf = file(extractedString)
+                    } else {
+                        sf = new File(f.parentFile, extractedString)
+                    }
+                    if (sf.exists()) {
+                        HashSet<String> dp = dfsFile(sf)
+                        if (!dp.isEmpty()) {
+                            directDepend.addAll(dp)
+                        }
+                    } else {
+                        throw Exception("找不到 $extractedString 文件")
+                    }
+                }
+            } else {
+                String regex = "projectOrAAr\\(['\"](.*?)['\"]\\)"
+                Pattern pattern = Pattern.compile(regex)
+                Matcher matcher = pattern.matcher(line)
+                if (matcher.find()) {
+                    String extractedString = matcher.group(1).replaceAll(":", "/")
+                    // 提取匹配到的第一个括号内的内容
+                    if (line.contains("implementation")) {
+                        directDepend.add("implementation@$extractedString")
+                    } else if (line.contains("api")) {
+                        directDepend.add("api@$extractedString")
+                    } else if (line.contains("kapt") || line.contains("annotationProcessor")) {
+                        //忽略
+                    } else {
+                        println("暂不支持这个依赖关键词 $line")
+                    }
+                }
             }
         }
+        return directDepend
     }
+    HashSet<String> directDepend = dfsFile(buildFile)
     allDirectDepends.put(projectPath, directDepend)
     directDepend.forEach {
-        collectDepends(it)
+        collectDepends(it.split("@")[1])
     }
 }
 compileProject.forEach {
     collectDepends(it)
 }
+
 //step2
-//根据直接依赖 整理出 module的所有依赖
-LinkedHashMap<String, HashSet<String>> allCompleteDepends = new LinkedHashMap<>()
-def collectDependsV2
-collectDependsV2 = { String str ->
-    if (allCompleteDepends.containsKey(str)) return
-    HashSet<String> directDepend = allDirectDepends.get(str)
-    if (directDepend != null) {
-        HashSet<String> completeDepend = new HashSet()
-        completeDepend.addAll(directDepend)
-        directDepend.forEach {
-            collectDependsV2(it)
-            def nextDepends = allCompleteDepends.get(it)
-            if (nextDepends != null) {
-                completeDepend.addAll(nextDepends)
-            }
+//根据直接依赖 整理出 module的间接依赖
+LinkedHashMap<String, HashSet<String>> allSecondhandDepends = new LinkedHashMap<>()
+def collectApiDepends
+collectApiDepends = { String str ->
+    HashSet<String> apiDepend = new HashSet<>()
+    def directDepends = allDirectDepends.get(str)
+    directDepends.forEach {
+        if (it.contains("api@")) {
+            String path = it.split("@")[1]
+            apiDepend.add(path)
+            apiDepend.addAll(collectApiDepends(path))
         }
-        allCompleteDepends.put(str, completeDepend)
     }
+    return apiDepend
 }
-allDirectDepends.keySet().forEach {
-    collectDependsV2(it)
+compileProject.forEach {
+    def directDepends = allDirectDepends.get(it)
+    HashSet<String> secondhandDepend = new HashSet<>()
+    directDepends.forEach {
+        String path = it.split("@")[1]
+        HashSet<String> apiList = collectApiDepends(path)
+        secondhandDepend.addAll(apiList)
+    }
+    allSecondhandDepends.put(it, secondhandDepend)
 }
 
 //step3
-//剔除1--只需要关注 源码依赖module的所有依赖
-Iterator iterator = allCompleteDepends.iterator()
-while (iterator.hasNext()) {
-    if (!compileProject.contains(iterator.next().key)) {
-        iterator.remove()
+//剔除1--只需要关注 源码依赖module与源码module的依赖关系 且是间接依赖
+def isDirectDepend = { String project1, String project2 ->
+    def directDepends = allDirectDepends.get(project1)
+    boolean ret = false
+    if (directDepends != null) {
+        directDepends.forEach {
+            if (it.contains(project2)) {
+                ret = true
+            }
+        }
     }
+    return ret
 }
-
-//剔除2--只需要关注 源码依赖module与源码module的依赖关系，且关系是间接依赖
-allCompleteDepends.entrySet().forEach {
-    String mProject = it.key
-    Iterator stringIterator = it.value.iterator()
-    while (stringIterator.hasNext()) {
-        String oneDepend = stringIterator.next()
-        if (!compileProject.contains(oneDepend) || allDirectDepends.get(mProject).contains(oneDepend)) {
-            stringIterator.remove()
+allSecondhandDepends.entrySet().forEach {
+    String projectPath = it.key
+    Iterator iterator = it.value.iterator()
+    while (iterator.hasNext()) {
+        String oneDepend = iterator.next()
+        if (!compileProject.contains(oneDepend) || isDirectDepend(projectPath, oneDepend)) {
+            iterator.remove()
         }
     }
 }
-println("源码module之间可能丢失的依赖关系  ${allCompleteDepends}")
+
+//step4
+//剔除2--清除空数据
+def iterator = allSecondhandDepends.iterator()
+while (iterator.hasNext()) {
+    def entry = iterator.next()
+    if (entry.value.isEmpty()) {
+        iterator.remove()
+    }
+}
+allSecondhandDepends.entrySet().forEach {
+    println("源码module之间可能丢失的依赖关系  ${it}")
+}
+
 
 //使用 compileOnly 保证编译通过
-allCompleteDepends.entrySet().forEach { entry ->
+allSecondhandDepends.entrySet().forEach { entry ->
     String mProject = entry.key.replaceAll("/", ":")
     gradle.rootProject.project(mProject).afterEvaluate {
         Project p = it
