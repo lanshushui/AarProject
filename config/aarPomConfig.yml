@@ -8,3 +8,9 @@ projects:
   - projectPath: /library3
     artifactId: library3
     version: '5.1708272438582'
+  - projectPath: /apt/mylibrary-api
+    artifactId: apt-mylibrary-api
+    version: '0'
+  - projectPath: /apt/mylibrary-compile
+    artifactId: apt-mylibrary-compile
+    version: '0'

@@ -10,6 +10,9 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/apt" />
+            <option value="$PROJECT_DIR$/apt/mylibrary-api" />
+            <option value="$PROJECT_DIR$/apt/mylibrary-compile" />
             <option value="$PROJECT_DIR$/framework" />
             <option value="$PROJECT_DIR$/library1" />
             <option value="$PROJECT_DIR$/library3" />

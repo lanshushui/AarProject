@@ -1,0 +1,19 @@
+//为了实现AbstractProcessor，只能用java-library插件
+//这个模块 implementation的模块也只能是java-library,不能是android.library模块
+plugins {
+    id 'java-library'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+dependencies {
+    implementation fileTree(dir: 'libs', includes: ['*.jar'])
+
+    // 编译时期进行注解处理
+    annotationProcessor 'com.google.auto.service:auto-service:1.0-rc4'
+    implementation 'com.google.auto.service:auto-service:1.0-rc4'
+    // 依赖于注解
+    implementation projectOrAAr(":apt:mylibrary-api")
+}
