@@ -1,4 +1,5 @@
 plugins {
+    //升级版的java插件，内部会apply 'java'插件，产物也是jar
     id 'java-library'
 }
 

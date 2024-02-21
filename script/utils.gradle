@@ -6,8 +6,13 @@ static boolean isAndroidPlugin(Project curProject) {
 static boolean isAppPlugin(Project curProject) {
     return curProject.plugins.hasPlugin("com.android.application")
 }
+
+static boolean isJavaPlugin(Project curProject) {
+    return curProject.plugins.hasPlugin("java")
+}
 //进行函数的导出
-ext{
-    isAndroidPlugin=this.&isAndroidPlugin
-    isAppPlugin=this.&isAppPlugin
+ext {
+    isAndroidPlugin = this.&isAndroidPlugin
+    isAppPlugin = this.&isAppPlugin
+    isJavaPlugin = this.&isJavaPlugin
 }

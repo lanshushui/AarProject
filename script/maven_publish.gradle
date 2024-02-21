@@ -29,7 +29,11 @@ afterEvaluate {
         }
         publications { PublicationContainer publicationContainer ->
             release(MavenPublication) {
-                from components.release
+                if(isAndroidPlugin(project)){
+                    from components.release
+                }else if(isJavaPlugin(project)){
+                    from components.java
+                }
 //                artifact androidSourcesJar // 上传源码
                 groupId = GROUP_ID
                 artifactId = ARTIFACT_ID

@@ -185,7 +185,7 @@ gradle.beforeProject {
                 }
             }
             //设置maven_publish插件
-            if (isAndroidPlugin(it) && aarConfigManager.isAarEnableProject(it)) {
+            if ((isAndroidPlugin(it) || isJavaPlugin(it)) && aarConfigManager.isAarEnableProject(it)) {
                 it.apply from: file("${rootDir}/script/maven_publish.gradle")
             }
         }
