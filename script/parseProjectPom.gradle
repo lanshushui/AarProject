@@ -32,22 +32,9 @@ class AarConfigManager {
     private LinkedHashMap<String, AarConfig> aarConfigs
     private Gradle gradle
 
-    AarConfigManager(Gradle gradle, LinkedHashMap<String, AarConfig> aarConfigs, LinkedHashMap<String, String> compileConfigs) {
+    AarConfigManager(Gradle gradle, LinkedHashMap<String, AarConfig> aarConfigs) {
         this.gradle = gradle
         this.aarConfigs = aarConfigs
-        int aarNum = 0
-        compileConfigs.forEach { String key, String value ->
-            AarConfig aarConfig = aarConfigs.get(key)
-            if (aarConfig != null) {
-                if (value.equalsIgnoreCase("aar") && aarConfig.version != "0") {
-                    aarConfig.compileMode = CompileMode.AAR
-                    aarNum++
-                } else {
-                    aarConfig.compileMode = CompileMode.SOURCE
-                }
-            }
-        }
-        println("配置了 ${aarConfigs.size()}个Pom数据,其中${aarNum}个aar化，${aarConfigs.size() - aarNum}个源码化")
     }
 
     AarConfig getAarConfig(String dependencyNotation) {
@@ -160,7 +147,27 @@ if (compileModeFile.exists()) {
     compileConfigs = yaml.load(compileModeFile.newInputStream())
 }
 
-gradle.ext.aarConfigManager = new AarConfigManager(gradle, aarConfigs, compileConfigs)
+def taskName = gradle.startParameter.taskRequests[0]?.args.toString() ?: ""
+def isPublishing = taskName?.contains(":uploadArchives") || taskName?.contains("PublicationToMavenRepository")
+
+int aarNum = 0
+aarConfigs.forEach { String key, AarConfig aarConfig ->
+    boolean isAar = compileConfigs.get(key).equalsIgnoreCase("aar")
+    if (isAar && aarConfig.version != "0") {
+        aarConfig.compileMode = CompileMode.AAR
+    }
+    //发布AAR时，为了防止pom混乱，只能发布aar的module是源码化，其他都是aar化
+    if (isPublishing) {
+        aarConfig.compileMode = CompileMode.AAR
+        if (taskName.contains("${aarConfig.projectPath.replaceAll("/", ":")}")) {
+            aarConfig.compileMode = CompileMode.SOURCE
+        }
+    }
+}
+
+println("配置了 ${aarConfigs.size()}个Pom数据,其中${aarNum}个aar化，${aarConfigs.size() - aarNum}个源码化")
+
+gradle.ext.aarConfigManager = new AarConfigManager(gradle, aarConfigs)
 
 //引入所有源码依赖的project
 gradle.settingsEvaluated { setting ->

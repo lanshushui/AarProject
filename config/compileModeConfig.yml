@@ -1,6 +1,6 @@
 # 选择 aar source 两个模式
 /library1: source
-/library2: aar
-/library3: source
+/library2: source
+/library3: aar
 /apt/mylibrary-compile: source
 /apt/mylibrary-api: source
