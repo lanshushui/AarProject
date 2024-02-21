@@ -4,6 +4,13 @@ import java.util.regex.Pattern
 //修复剔除aar后导致的依赖中断问题
 //因为是静态分析build.gradle文件，所以只能找到build.gradle文件导入的依赖关系
 
+def taskName = gradle.startParameter.taskRequests[0]?.args?.get
+def isPublishing = taskName?.contains(":uploadArchives") || taskName?.contains("PublicationToMavenRepository")
+if (isPublishing) {
+    println("发布组件时，不用分析是否存在依赖中断")
+    return
+}
+
 //目标： 获得源码依赖的模块 的 所有间接依赖
 
 def aarConfigManager = gradle.ext.aarConfigManager
@@ -33,7 +40,7 @@ collectDepends = { String p ->
     File buildFile = new File("${rootDir}/${projectPath}/build.gradle")
     if (!buildFile.exists()) throw Exception("无法找到 ${projectPath}项目的 build.gradle文件")
     def dfsFile
-    dfsFile = { File f ->
+    dfsFile = { File f, File projectDir ->
         BufferedReader br = new BufferedReader(new FileReader(f))
         HashSet<String> directDepend = new HashSet()
         while (true) {
@@ -49,15 +56,16 @@ collectDepends = { String p ->
                 Matcher matcher = pattern.matcher(line)
                 if (matcher.find()) {
                     String extractedString = matcher.group(1)
-                    java.nio.file.Path paths = Paths.get(extractedString)
-                    File sf = null
-                    if (paths.isAbsolute()) {
-                        sf = file(extractedString)
-                    } else {
-                        sf = new File(f.parentFile, extractedString)
+                    File sf = file(extractedString)
+                    if (!sf.exists()) {
+                        sf = new File(projectDir, extractedString)
+                    }
+                    if (!sf.exists() && extractedString.contains("\$rootDir")) {
+                        def temp = extractedString.replace("\$rootDir", "${rootDir}")
+                        sf = file(temp)
                     }
                     if (sf.exists()) {
-                        HashSet<String> dp = dfsFile(sf)
+                        HashSet<String> dp = dfsFile(sf, projectDir)
                         if (!dp.isEmpty()) {
                             directDepend.addAll(dp)
                         }
@@ -86,7 +94,7 @@ collectDepends = { String p ->
         }
         return directDepend
     }
-    HashSet<String> directDepend = dfsFile(buildFile)
+    HashSet<String> directDepend = dfsFile(buildFile, buildFile.parentFile)
     allDirectDepends.put(projectPath, directDepend)
     directDepend.forEach {
         collectDepends(it.split("@")[1])
@@ -114,13 +122,15 @@ collectApiDepends = { String str ->
 }
 compileProject.forEach {
     def directDepends = allDirectDepends.get(it)
-    HashSet<String> secondhandDepend = new HashSet<>()
-    directDepends.forEach {
-        String path = it.split("@")[1]
-        HashSet<String> apiList = collectApiDepends(path)
-        secondhandDepend.addAll(apiList)
+    if (directDepends != null) {
+        HashSet<String> secondhandDepend = new HashSet<>()
+        directDepends.forEach {
+            String path = it.split("@")[1]
+            HashSet<String> apiList = collectApiDepends(path)
+            secondhandDepend.addAll(apiList)
+        }
+        allSecondhandDepends.put(it, secondhandDepend)
     }
-    allSecondhandDepends.put(it, secondhandDepend)
 }
 
 //step3
