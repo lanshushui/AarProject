@@ -3,10 +3,7 @@ import java.util.regex.Pattern
 
 //修复剔除aar后导致的依赖中断问题
 //因为是静态分析build.gradle文件，所以只能找到build.gradle文件导入的依赖关系
-
-def taskName = gradle.startParameter.taskRequests[0]?.args.toString() ?: ""
-def isPublishing = taskName.contains(":uploadArchives") || taskName.contains("PublicationToMavenRepository")
-if (isPublishing) {
+if (isPublishTask(gradle)) {
     println("发布组件时，不用分析是否存在依赖中断")
     return
 }

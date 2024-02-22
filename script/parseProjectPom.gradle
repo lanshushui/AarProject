@@ -14,6 +14,14 @@ if (!pomFile.exists()) {
     return
 }
 
+def taskName = gradle.startParameter.taskRequests[0]?.args.getAt(0) ?: ""
+def isPublishing = isPublishTask(gradle)
+if (isPublishing) {
+    if (!gradle.startParameter.projectProperties.containsKey("projectPath")) {
+        throw new Exception("没有projectPath参数 不合法")
+    }
+}
+
 enum CompileMode {
     SOURCE,
     AAR
@@ -147,9 +155,6 @@ if (compileModeFile.exists()) {
     compileConfigs = yaml.load(compileModeFile.newInputStream())
 }
 
-def taskName = gradle.startParameter.taskRequests[0]?.args.toString() ?: ""
-def isPublishing = taskName?.contains(":uploadArchives") || taskName?.contains("PublicationToMavenRepository")
-
 int aarNum = 0
 aarConfigs.forEach { String key, AarConfig aarConfig ->
     boolean isAar = compileConfigs.get(key).equalsIgnoreCase("aar")
@@ -162,6 +167,9 @@ aarConfigs.forEach { String key, AarConfig aarConfig ->
         if (taskName.contains("${aarConfig.projectPath.replaceAll("/", ":")}")) {
             aarConfig.compileMode = CompileMode.SOURCE
         }
+    }
+    if (aarConfig.compileMode == CompileMode.AAR) {
+        aarNum++
     }
 }
 
@@ -176,8 +184,9 @@ gradle.settingsEvaluated { setting ->
         setting.include it.projectPath.replaceAll("/", ":")
     }
 }
-gradle.beforeProject {
-    it.afterEvaluate {
+gradle.beforeProject { Project p ->
+    p.apply from: file("${rootDir}/script/utils.gradle")
+    p.afterEvaluate {
         AarConfigManager aarConfigManager = gradle.ext.aarConfigManager
         if (it == gradle.rootProject) {
             it.apply from: file("${rootDir}/script/publishAAr_RP.gradle")
@@ -198,7 +207,7 @@ gradle.beforeProject {
         }
     }
     //基于gradle的动态特性设计，如果是build.gradle文件 则implementation projectOrAAr(":xxx") 直接接入
-    it.ext.projectOrAAr = { String dependencyNotation ->
+    p.ext.projectOrAAr = { String dependencyNotation ->
         AarConfigManager aarConfigManager = gradle.ext.aarConfigManager
         def aarConfig = aarConfigManager.getAarConfig(dependencyNotation)
         if (aarConfig == null || aarConfig.compileMode == CompileMode.SOURCE) {
@@ -209,7 +218,10 @@ gradle.beforeProject {
             def exclude = { module ->
                 def sourceProjects = aarConfigManager.getSourceTypeProjectConfig()
                 sourceProjects.forEach {
-                    module.exclude group: "${it.groupId}", module: "${it.artifactId}"
+                    //为了不影响pom文件，整洁美观；  不需要 exclude 自身project
+                    if (it.projectPath != p.path.replaceAll(":", "/")){
+                        module.exclude group: "${it.groupId}", module: "${it.artifactId}"
+                    }
                 }
             }
             return ["${aarConfig.groupId}:${aarConfig.artifactId}:${aarConfig.version}", exclude]

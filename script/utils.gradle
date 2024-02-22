@@ -10,9 +10,21 @@ static boolean isAppPlugin(Project curProject) {
 static boolean isJavaPlugin(Project curProject) {
     return curProject.plugins.hasPlugin("java")
 }
+
+static String getTaskName(Gradle gradle) {
+    return gradle.startParameter.taskRequests[0]?.args.getAt(0) ?: ""
+}
+
+static boolean isPublishTask(Gradle gradle) {
+    def taskName = getTaskName(gradle)
+    def isPublishing = taskName?.contains(":uploadArchives") || taskName?.contains("PublicationToMavenRepository")
+    return isPublishing
+}
 //进行函数的导出
 ext {
     isAndroidPlugin = this.&isAndroidPlugin
     isAppPlugin = this.&isAppPlugin
     isJavaPlugin = this.&isJavaPlugin
+    getTaskName = this.&getTaskName
+    isPublishTask = this.&isPublishTask
 }

@@ -1,16 +1,16 @@
 projects:
   - projectPath: /library1
     artifactId: library1
-    version: '7.1708526370409'
+    version: '0'
   - projectPath: /library2
     artifactId: library2
-    version: '5.1708272614001'
+    version: '2.1708612008092'
   - projectPath: /library3
     artifactId: library3
-    version: '5.1708272438582'
+    version: '2.1708611968901'
   - projectPath: /apt/mylibrary-api
     artifactId: apt-mylibrary-api
-    version: '6.1708522946396'
+    version: '0'
   - projectPath: /apt/mylibrary-compile
     artifactId: apt-mylibrary-compile
     version: '0'

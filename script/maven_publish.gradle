@@ -1,5 +1,5 @@
 apply plugin: 'maven-publish'
-apply from: file("${rootDir}/script/utils.gradle")
+
 // 上传源码的 task
 task androidSourcesJar(type: Jar) {
     // 如果有Kotlin那么就需要打入dir : getSrcDirs
