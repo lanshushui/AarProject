@@ -1,7 +1,7 @@
 projects:
   - projectPath: /library1
     artifactId: library1
-    version: '0'
+    version: '2.1708616629098'
   - projectPath: /library2
     artifactId: library2
     version: '2.1708612008092'
@@ -10,7 +10,7 @@ projects:
     version: '2.1708611968901'
   - projectPath: /apt/mylibrary-api
     artifactId: apt-mylibrary-api
-    version: '0'
+    version: '1.1708614252430'
   - projectPath: /apt/mylibrary-compile
     artifactId: apt-mylibrary-compile
-    version: '0'
+    version: '4.1708617614976'

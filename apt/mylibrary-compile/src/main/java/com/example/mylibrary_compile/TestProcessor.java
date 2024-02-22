@@ -15,12 +15,14 @@ import javax.lang.model.element.TypeElement;
 public class TestProcessor extends AbstractProcessor {
     @Override
     public Set<String> getSupportedAnnotationTypes() {
+        System.out.println("TestProcessor--getSupportedAnnotationTypes");
         return Collections.singleton(Test.class.getCanonicalName());
     }
 
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        System.out.println("TestProcessor--process");
         return false;
     }
 }

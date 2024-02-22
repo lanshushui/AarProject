@@ -2,5 +2,5 @@
 /library1: source
 /library2: aar
 /library3: aar
-/apt/mylibrary-compile: source
+/apt/mylibrary-compile: aar
 /apt/mylibrary-api: source
