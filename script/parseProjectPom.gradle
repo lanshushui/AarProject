@@ -154,6 +154,15 @@ def compileConfigs = [:]
 if (compileModeFile.exists()) {
     compileConfigs = yaml.load(compileModeFile.newInputStream())
 }
+//处理 启动publishAllAArInner任务的参数
+ArrayList<String> needPublishProjectsList = new ArrayList<>()
+String needPublishProjects = gradle.startParameter.projectProperties.get("needPublishProjects")
+if (needPublishProjects != null && !needPublishProjects.isEmpty()) {
+    needPublishProjects = needPublishProjects.substring(1, needPublishProjects.length() - 1)
+    needPublishProjects.split("#").each {
+        needPublishProjectsList.add(it.trim())
+    }
+}
 
 int aarNum = 0
 aarConfigs.forEach { String key, AarConfig aarConfig ->
@@ -167,6 +176,9 @@ aarConfigs.forEach { String key, AarConfig aarConfig ->
         if (taskName.contains("${aarConfig.projectPath.replaceAll("/", ":")}")) {
             aarConfig.compileMode = CompileMode.SOURCE
         }
+    }
+    if (needPublishProjectsList.contains("${aarConfig.projectPath}")) {
+        aarConfig.compileMode = CompileMode.SOURCE
     }
     if (aarConfig.compileMode == CompileMode.AAR) {
         aarNum++
@@ -219,7 +231,7 @@ gradle.beforeProject { Project p ->
                 def sourceProjects = aarConfigManager.getSourceTypeProjectConfig()
                 sourceProjects.forEach {
                     //为了不影响pom文件，整洁美观；  不需要 exclude 自身project
-                    if (it.projectPath != p.path.replaceAll(":", "/")){
+                    if (it.projectPath != p.path.replaceAll(":", "/")) {
                         module.exclude group: "${it.groupId}", module: "${it.artifactId}"
                     }
                 }

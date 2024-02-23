@@ -20,6 +20,21 @@ static boolean isPublishTask(Gradle gradle) {
     def isPublishing = taskName?.contains(":uploadArchives") || taskName?.contains("PublicationToMavenRepository")
     return isPublishing
 }
+
+static def execCmd(String cmd, Project project) {
+    def result = new ByteArrayOutputStream()
+    project.exec {
+        commandLine 'cmd', '/c', cmd
+        standardOutput = result
+    }.rethrowFailure()
+    return result.toString()
+}
+
+static def getProjectLastCommitId(String projectPath,Gradle gradle) {
+    String cmd = "git log -n 1 --oneline --format=%H ${projectPath.substring(1, projectPath.length())}"
+    return execCmd(cmd, gradle.rootProject)
+}
+
 //进行函数的导出
 ext {
     isAndroidPlugin = this.&isAndroidPlugin
@@ -27,4 +42,6 @@ ext {
     isJavaPlugin = this.&isJavaPlugin
     getTaskName = this.&getTaskName
     isPublishTask = this.&isPublishTask
+    execCmd = this.&execCmd
+    getProjectLastCommitId = this.&getProjectLastCommitId
 }

@@ -1,7 +1,69 @@
 //针对rootProject 的aar任务
+def publishAllAAr = {
+
+    HashSet<String> needPublishProjects = new HashSet<>()
+
+    //保存每个项目发布新版本的信息
+    HashMap<String, String> publishVersions = new HashMap<>()
+    String tempProjectPath = null
+    execCmd("git blame config/aarPomConfig.yml", gradle.rootProject).eachLine { String line ->
+        if (line.contains("projectPath:")) {
+            tempProjectPath = line.split("projectPath:")[1].trim()
+        } else {
+            if (line.contains("version:")) {
+                publishVersions.put(tempProjectPath, line)
+            }
+        }
+    }
+    def aarConfigManager = gradle.ext.aarConfigManager
+    aarConfigManager.getAllAArConfigs().forEach {
+        //从未发布过，要发布
+        if (it.version == "0") {
+            needPublishProjects.add(it.projectPath)
+        }
+        //module最后一次提交和 配置文件内 对应version字段的commit信息是否相符
+        //不符合也要发布
+        String lastCommitId = getProjectLastCommitId(it.projectPath, gradle)
+        if (!publishVersions.get(it.projectPath).contains(lastCommitId)) {
+            needPublishProjects.add(it.projectPath)
+        }
+    }
+    if (needPublishProjects.isEmpty()) {
+        println("没有需要发布AAR的模块")
+        System.exit(0)
+    }
+    println("所有需要发布AAR的模块 $needPublishProjects")
+    StringBuilder sb = new StringBuilder()
+    needPublishProjects.forEach {
+        sb.append(it)
+        sb.append("#")
+    }
+    String needPublishProjectsStr = sb.toString()
+    needPublishProjectsStr = needPublishProjectsStr.substring(0, needPublishProjectsStr.length() - 1)
+    //不能把needPublishProjects.toString直接当参数，因为字符串有【,】,会导致命令混乱
+    String result = execCmd("gradlew :publishAllAArInner -PneedPublishProjects=${needPublishProjectsStr}", rootProject)
+    println(result)
+}
 gradle.rootProject.task("publishAAr").enabled = false
 gradle.rootProject.task("publishAllAAr", group: "publishing") {
     doLast {
-        println("publishing")
+        publishAllAAr()
+    }
+}
+gradle.rootProject.task("publishAllAArInner", group: "publishing") {
+    doLast {
+        //找到所有需要发布的module
+        ArrayList<String> needPublishProjectsList = new ArrayList<>()
+        String needPublishProjects = gradle.startParameter.projectProperties.get("needPublishProjects")
+        if (needPublishProjects == null || needPublishProjects.isEmpty()) {
+            println("没有needPublishProjects参数 是不行的")
+            return
+        }
+        needPublishProjects = needPublishProjects.substring(1, needPublishProjects.length() - 1)
+        needPublishProjects.split("#").each {
+            needPublishProjectsList.add(it.trim())
+        }
+        println("再次确认 所有需要发布AAR的模块 $needPublishProjectsList")
+
     }
 }
