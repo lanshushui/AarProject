@@ -33,7 +33,7 @@ static def execCmd(String cmd, Project project) {
 
 static def getProjectLastCommitId(String projectPath, Gradle gradle) {
     String cmd = "git log -n 1 --oneline --format=%H ${projectPath.substring(1, projectPath.length())}"
-    return execCmd(cmd, gradle.rootProject)
+    return execCmd(cmd, gradle.rootProject).trim()
 }
 
 //进行函数的导出

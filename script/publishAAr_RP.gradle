@@ -100,6 +100,15 @@ gradle.rootProject.task("publishAllAArInner", group: "publishing") {
         }
         println("已分析完依赖，开始排序")
 
+        //dependMap中是源码的模块，但可能包含不准备发布的模块，所以需要和needPublishProjectsList做交集
+        def iterator = dependMap.iterator()
+        while (iterator.hasNext()) {
+            def next = iterator.next()
+            if (!needPublishProjectsList.contains(next.key)) {
+                iterator.remove()
+            }
+        }
+
         //deque保存无依赖的数据
         ArrayDeque<String> deque = new ArrayDeque()
         dependMap.entrySet().forEach {
@@ -129,9 +138,16 @@ gradle.rootProject.task("publishAllAArInner", group: "publishing") {
             println("拓扑排序发现有环，无法进行下一步操作")
             throw new Exception("拓扑排序发现有环，无法进行下一步操作")
         }
+        StringBuilder sb = new StringBuilder()
+        sb.append("\"[auto-script]---")
         result.forEach {
             rootProject.project(it).ext.publishAArMethod()
+            String lastCommitId = getProjectLastCommitId(it.replaceAll(":", "/"), gradle)
+            sb.append("$it($lastCommitId);")
         }
+        sb.append("\"")
         println("所有组件发布成功")
+        //commit aarPomConfig文件 ,更新version字段
+        execCmd("git commit config/aarPomConfig.yml -m ${sb.toString()}", gradle.rootProject)
     }
 }
