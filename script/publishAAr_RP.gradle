@@ -55,6 +55,10 @@ gradle.rootProject.task("publishAllAAr", group: "publishing") {
 
 class DependStruct {
     HashSet<String> dependDetail = new HashSet<>()
+
+    public String toString() {
+        return dependDetail
+    }
 }
 
 gradle.rootProject.task("publishAllAArInner", group: "publishing") {
@@ -100,7 +104,6 @@ gradle.rootProject.task("publishAllAArInner", group: "publishing") {
         needPublishProjectsList.forEach {
             dfsDependence(it)
         }
-        println("已分析完依赖，开始排序")
 
         //dependMap中是源码的模块，但可能包含不准备发布的模块，所以需要和needPublishProjectsList做交集
         def iterator = dependMap.iterator()
@@ -110,6 +113,18 @@ gradle.rootProject.task("publishAllAArInner", group: "publishing") {
                 iterator.remove()
             }
         }
+        dependMap.values().forEach {
+            def di = it.dependDetail.iterator()
+            while (di.hasNext()) {
+                def next = di.next()
+                if (!needPublishProjectsList.contains(next)) {
+                    di.remove()
+                }
+            }
+        }
+
+        println("分析的依赖结果 $dependMap")
+        println("已分析完依赖，开始排序")
 
         //deque保存无依赖的数据
         ArrayDeque<String> deque = new ArrayDeque()
