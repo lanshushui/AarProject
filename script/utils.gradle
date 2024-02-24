@@ -36,6 +36,11 @@ static def getProjectLastCommitId(String projectPath, Gradle gradle) {
     return execCmd(cmd, gradle.rootProject).trim()
 }
 
+//根据commitId 获得commit的信息(不包含作者，时间的)
+static def getCommitMsg(String commitId, Gradle gradle) {
+    String cmd = "git log --pretty=format:\"%s\" $commitId -1"
+    return execCmd(cmd, gradle.rootProject).trim()
+}
 //进行函数的导出
 ext {
     isAndroidPlugin = this.&isAndroidPlugin
@@ -45,4 +50,5 @@ ext {
     isPublishTask = this.&isPublishTask
     execCmd = this.&execCmd
     getProjectLastCommitId = this.&getProjectLastCommitId
+    getCommitMsg = this.&getCommitMsg
 }

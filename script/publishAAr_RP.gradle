@@ -11,7 +11,9 @@ def publishAllAAr = {
             tempProjectPath = line.split("projectPath:")[1].trim()
         } else {
             if (line.contains("version:")) {
-                publishVersions.put(tempProjectPath, line)
+                String commitId = line.split(" ")[0].trim()
+                println("commidId $commitId")
+                publishVersions.put(tempProjectPath, getCommitMsg(commitId, gradle))
             }
         }
     }
