@@ -22,6 +22,7 @@ static boolean isPublishTask(Gradle gradle) {
 }
 
 static def execCmd(String cmd, Project project) {
+    println("execCmd $cmd")
     def result = new ByteArrayOutputStream()
     project.exec {
         commandLine 'cmd', '/c', cmd
@@ -30,7 +31,7 @@ static def execCmd(String cmd, Project project) {
     return result.toString()
 }
 
-static def getProjectLastCommitId(String projectPath,Gradle gradle) {
+static def getProjectLastCommitId(String projectPath, Gradle gradle) {
     String cmd = "git log -n 1 --oneline --format=%H ${projectPath.substring(1, projectPath.length())}"
     return execCmd(cmd, gradle.rootProject)
 }

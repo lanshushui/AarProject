@@ -50,6 +50,11 @@ gradle.rootProject.task("publishAllAAr", group: "publishing") {
         publishAllAAr()
     }
 }
+
+class DependStruct {
+    HashSet<String> dependDetail = new HashSet<>()
+}
+
 gradle.rootProject.task("publishAllAArInner", group: "publishing") {
     doLast {
         //找到所有需要发布的module
@@ -59,11 +64,74 @@ gradle.rootProject.task("publishAllAArInner", group: "publishing") {
             println("没有needPublishProjects参数 是不行的")
             return
         }
-        needPublishProjects = needPublishProjects.substring(1, needPublishProjects.length() - 1)
         needPublishProjects.split("#").each {
-            needPublishProjectsList.add(it.trim())
+            needPublishProjectsList.add(it.trim().replaceAll("/", ":"))
         }
         println("再次确认 所有需要发布AAR的模块 $needPublishProjectsList")
 
+        //进行源码module之间的依赖分析
+        HashMap<String, DependStruct> dependMap = new HashMap<>()
+        def dfsDependence
+        dfsDependence = { String path ->
+            if (dependMap.containsKey(path)) {
+                return dependMap.get(path)
+            }
+            def defaultRet = new DependStruct()
+            if (!dependMap.containsKey(path)) {
+                Project p = gradle.rootProject.project(path)
+                p.configurations.each {
+                    it.allDependencies.forEach {
+                        //只需要找源码module之间的依赖关系
+                        if (it instanceof ProjectDependency && it.dependencyProject != p) {
+                            DependStruct subDepend = dfsDependence(it.dependencyProject.path)
+                            subDepend.dependDetail.forEach {
+                                defaultRet.dependDetail.add(it)
+                            }
+                            defaultRet.dependDetail.add(it.getDependencyProject().path)
+                        }
+                    }
+                }
+            }
+            dependMap.put(path, defaultRet)
+            return defaultRet
+        }
+        needPublishProjectsList.forEach {
+            dfsDependence(it)
+        }
+        println("已分析完依赖，开始排序")
+
+        //deque保存无依赖的数据
+        ArrayDeque<String> deque = new ArrayDeque()
+        dependMap.entrySet().forEach {
+            if (it.value.dependDetail.isEmpty()) {
+                deque.offer(it.key)
+            }
+        }
+        ArrayList<String> result = new ArrayList<>()
+        while (!deque.isEmpty()) {
+            String top = deque.pop()
+            println("$top 无依赖，加入结果集result")
+            result.add(top)
+            dependMap.entrySet().forEach {
+                String path = it.key
+                HashSet<String> dependDetail = it.value.dependDetail
+                if (dependDetail.contains(top)) {
+                    dependDetail.remove(top)
+                    if (dependDetail.isEmpty() && !deque.contains(path) && !result.contains(path)) {
+                        deque.offer(path)
+                        println("$top 无依赖，加入待排序队列deque")
+                    }
+                }
+            }
+        }
+        println("拓扑排序完成 $result")
+        if (result.size() != dependMap.size()) {
+            println("拓扑排序发现有环，无法进行下一步操作")
+            throw new Exception("拓扑排序发现有环，无法进行下一步操作")
+        }
+        result.forEach {
+            rootProject.project(it).ext.publishAArMethod()
+        }
+        println("所有组件发布成功")
     }
 }

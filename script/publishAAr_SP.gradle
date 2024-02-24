@@ -26,17 +26,21 @@ def getNextVersion = { VERSION ->
     }
     return nextVersion
 }
+def publishAArMethod = {
+    String path = project.path
+    def aarConfigManager = gradle.ext.aarConfigManager
+    def version = aarConfigManager.getVersion(project)
+    String nextVersion = getNextVersion(version)
+    String cmd = "gradlew ${path}:publishReleasePublicationToMavenRepository -PprojectPath=${path} -Pversion=${nextVersion}"
+    rootProject.exec {
+        commandLine 'cmd', '/c', cmd
+    }.rethrowFailure()
+    println("${path} 发布了AAr,版本为 ${nextVersion}")
+    aarConfigManager.updateAarVersion(path, nextVersion)
+}
+project.ext.publishAArMethod = publishAArMethod
 task("publishAAr", group: "publishing") {
     doLast {
-        String path = project.path
-        def aarConfigManager = gradle.ext.aarConfigManager
-        def version = aarConfigManager.getVersion(project)
-        String nextVersion = getNextVersion(version)
-        String cmd = "gradlew ${path}:publishReleasePublicationToMavenRepository -PprojectPath=${path} -Pversion=${nextVersion}"
-        rootProject.exec {
-            commandLine 'cmd', '/c', cmd
-        }
-        println("${path} 发布了AAr,版本为 ${nextVersion}")
-        aarConfigManager.updateAarVersion(path, nextVersion)
+        publishAArMethod()
     }
 }

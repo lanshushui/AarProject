@@ -158,7 +158,6 @@ if (compileModeFile.exists()) {
 ArrayList<String> needPublishProjectsList = new ArrayList<>()
 String needPublishProjects = gradle.startParameter.projectProperties.get("needPublishProjects")
 if (needPublishProjects != null && !needPublishProjects.isEmpty()) {
-    needPublishProjects = needPublishProjects.substring(1, needPublishProjects.length() - 1)
     needPublishProjects.split("#").each {
         needPublishProjectsList.add(it.trim())
     }
@@ -177,7 +176,7 @@ aarConfigs.forEach { String key, AarConfig aarConfig ->
             aarConfig.compileMode = CompileMode.SOURCE
         }
     }
-    if (needPublishProjectsList.contains("${aarConfig.projectPath}")) {
+    if (needPublishProjectsList.contains(aarConfig.projectPath)) {
         aarConfig.compileMode = CompileMode.SOURCE
     }
     if (aarConfig.compileMode == CompileMode.AAR) {
